@@ -5,6 +5,7 @@ import CartModal from "./CartModal.jsx";
 
 export default function Header() {
   const { items } = useContext(StoreContext);
+  console.log(items);
 
   const modal = useRef();
 

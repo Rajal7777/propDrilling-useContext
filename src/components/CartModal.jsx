@@ -6,6 +6,7 @@ import Cart from "./Cart";
 const CartModal = forwardRef(function Modal({ title, actions }, ref) {
   const dialog = useRef();
 
+  //useImperativeHandle is a React Hook that lets you customize the handle exposed as a ref.
   useImperativeHandle(ref, () => {
     return {
       open: () => {
