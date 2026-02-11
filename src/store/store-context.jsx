@@ -1,90 +1,111 @@
-import { createContext, useState } from "react";
+import { createContext, useReducer } from "react";
 import { DUMMY_PRODUCTS } from "../dummy-products";
+import { use } from "react";
 
 //createContext returns a context object
 export const StoreContext = createContext({
   items: [],
-  //   this is only for autosuggestion
+  // used for autosuggestion
   addItemToCart: () => {},
   updateItemQuality: () => {},
 });
 
+//[(state)handle initial state](action) is for handeling custom function defined
+function shoppingCartReducer(state, action) {
+  if (action.type === "ADD_ITEM") {
+    //cop the prev state eg:-> prevShoppingCart.items = [item1, item2]// updatedItems = [item1, item2]
+    const updatedItems = [...state.items];
+
+    //look for same item in the cart if exist [findIndex()] () => {returns  index of the item found}
+    const existingCartItemIndex = updatedItems.findIndex(
+      (cartItem) => cartItem.id === action.payload,
+    );
+    const existingCartItem = updatedItems[existingCartItemIndex];
+
+    if (existingCartItem) {
+      const updatedItem = {
+        ...existingCartItem,
+        quantity: existingCartItem.quantity + 1,
+      };
+      //replace the old item with the updated item + increased quantity
+      updatedItems[existingCartItemIndex] = updatedItem;
+    } else {
+      const product = DUMMY_PRODUCTS.find(
+        (product) => product.id === action.payload,
+      );
+      updatedItems.push({
+        id: action.payload,
+        name: product.title,
+        price: product.price,
+        quantity: 1,
+      });
+    }
+
+    return {
+      ...state, // we can add this line incase of more than 1 state in order not to lose other state
+      items: updatedItems,
+    };
+  }
+
+  if (action.type === "UPDATE_ITEM") {
+    const updatedItems = [...state.items];
+    const updatedItemIndex = updatedItems.findIndex(
+      (item) => item.id === action.payload.productId,
+    );
+   
+    //get the selected item and its index/ID
+    const updatedItem = {
+      ...updatedItems[updatedItemIndex],
+    };
+
+    updatedItem.quantity += action.payload.amount;
+
+    if (updatedItem.quantity <= 0) {
+      updatedItems.splice(updatedItemIndex, 1);
+    } else {
+      updatedItems[updatedItemIndex] = updatedItem;
+    }
+
+    return {
+      ...state,
+      items: updatedItems,
+    };
+  }
+
+  return state;
+}
+
 //{ children } means:-->It will wrap other components inside it.
 export default function StoreContextProvider({ children }) {
-  const [shoppingCart, setShoppingCart] = useState({
-    items: [],
-  });
-  console.log(shoppingCart);
+  //useReducer returns 2 state initial state & dispatch to -->( handle custom logic / function)
+  const [shoppingCartState, shoppingCartDispatch] = useReducer(
+    shoppingCartReducer,
+    {
+      items: [],
+    },
+  );
 
   function handleAddItemToCart(id) {
-    //use the prev state to update the shopping cart
-    setShoppingCart((prevShoppingCart) => {
-      //copy the previous items in the cart
-      // prevShoppingCart.items = [item1, item2]
-      // updatedItems = [item1, item2]
-
-      const updatedItems = [...prevShoppingCart.items];
-
-
-      //look for same item in the cart if exist
-      //returns  index of the item found
-      const existingCartItemIndex = updatedItems.findIndex(
-        (cartItem) => cartItem.id === id,
-      );
-      const existingCartItem = updatedItems[existingCartItemIndex];
-
-      if (existingCartItem) {
-        const updatedItem = {
-          ...existingCartItem,
-          quantity: existingCartItem.quantity + 1,
-        };
-        //replace the old item with the updated item
-        updatedItems[existingCartItemIndex] = updatedItem;
-      } else {
-        const product = DUMMY_PRODUCTS.find((product) => product.id === id);
-        updatedItems.push({
-          id: id,
-          name: product.title,
-          price: product.price,
-          quantity: 1,
-        });
-      }
-
-      return {
-        items: updatedItems,
-      };
+    shoppingCartDispatch({
+      type: "ADD_ITEM",
+      payload: id,
     });
   }
 
   function handleUpdateCartItemQuantity(productId, amount) {
-    setShoppingCart((prevShoppingCart) => {
-      const updatedItems = [...prevShoppingCart.items];
-      const updatedItemIndex = updatedItems.findIndex(
-        (item) => item.id === productId,
-      );
-
-      const updatedItem = {
-        ...updatedItems[updatedItemIndex],
-      };
-
-      updatedItem.quantity += amount;
-
-      if (updatedItem.quantity <= 0) {
-        updatedItems.splice(updatedItemIndex, 1);
-      } else {
-        updatedItems[updatedItemIndex] = updatedItem;
-      }
-
-      return {
-        items: updatedItems,
-      };
+    shoppingCartDispatch({
+      type: "UPDATE_ITEM",
+      payload: {
+        productId,
+        amount,
+      },
     });
   }
 
   //usecontext
   // the value that will be provided to all components wrapped by StoreContextProvider
   const ctxValue = {
-    items: shoppingCart.items,
+    items: shoppingCartState.items,
     addItemToCart: handleAddItemToCart,
     updateItemQuantity: handleUpdateCartItemQuantity,
   };
